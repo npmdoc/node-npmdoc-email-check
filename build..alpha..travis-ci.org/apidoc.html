@@ -1,0 +1,176 @@
+<div class="apidocDiv">
+<style>
+/*csslint
+*/
+.apidocDiv {
+    background: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+}
+.apidocDiv a[href] {
+    color: #33f;
+    font-weight: bold;
+    text-decoration: none;
+}
+.apidocDiv a[href]:hover {
+    text-decoration: underline;
+}
+.apidocCodeCommentSpan {
+    background: #bbf;
+    color: #000;
+    display: block;
+}
+.apidocCodeKeywordSpan {
+    color: #d00;
+    font-weight: bold;
+}
+.apidocCodePre {
+    background: #eef;
+    border: 1px solid;
+    color: #777;
+    padding: 5px;
+    white-space: pre-wrap;
+}
+.apidocFooterDiv {
+    margin-top: 20px;
+    text-align: center;
+}
+.apidocModuleLi {
+    margin-top: 10px;
+}
+.apidocSectionDiv {
+    border-top: 1px solid;
+    margin-top: 20px;
+}
+.apidocSignatureSpan {
+    color: #777;
+    font-weight: bold;
+}
+</style>
+<h1>api documentation for
+    <a
+
+    >email-check (v1.1.0)</a>
+</h1>
+<h4>Async Node JS module to check if an email address exists</h4>
+<div class="apidocSectionDiv"><a
+    href="#apidoc.tableOfContents"
+    id="apidoc.tableOfContents"
+><h1>table of contents</h1></a><ol>
+
+    <li class="apidocModuleLi"><a href="#apidoc.module.email-check">module email-check</a><ol>
+
+        <li>
+
+            <a class="apidocElementLiA" href="#apidoc.element.email-check.email-check">
+            function <span class="apidocSignatureSpan"></span>email-check
+            <span class="apidocSignatureSpan">(email, opts)</span>
+            </a>
+
+        </li>
+
+    </ol></li>
+
+</ol></div>
+
+<div class="apidocSectionDiv">
+<h1><a href="#apidoc.module.email-check" id="apidoc.module.email-check">module email-check</a></h1>
+
+
+    <h2>
+        <a href="#apidoc.element.email-check.email-check" id="apidoc.element.email-check.email-check">
+        function <span class="apidocSignatureSpan"></span>email-check
+        <span class="apidocSignatureSpan">(email, opts)</span>
+        </a>
+    </h2>
+    <ul>
+    <li>description and source-code<pre class="apidocCodePre">email-check = function (email, opts) {
+  return new Promise(function (resolve, reject) {
+    email = validateEmail(email);
+    email ? resolve(email.split(&#x27;@&#x27;)[1]) : reject();
+  })
+    .then(function (domain) {
+      return promisify(dns.resolveMx, [domain]);
+    })
+    .catch(function (err) {
+      throw(new Error(&#x27;wrong&#x27;));
+    })
+    .then(function (addresses) {
+      if (addresses.length === 1) {
+        return addresses[0].exchange;
+      } else {
+        // Find the lowest priority mail server
+        var lowestPriorityIndex = 0;
+        var lowestPriority = addresses[0].priority;
+        for (var i = 1; i &#x3c; addresses.length; i++) {
+          var currentPriority = addresses[i].priority;
+          if (currentPriority &#x3c; lowestPriority) {
+            lowestPriority = currentPriority;
+            lowestPriorityIndex = i;
+          }
+        }
+        return addresses[lowestPriorityIndex].exchange;
+      }
+    })
+    .then(function (address) {
+      opts = opts || {};
+      var options = {
+        from: validateEmail(opts.from) || email,
+        timeout: opts.timeout || 5000
+      };
+      options.host = opts.host || options.from.split(&#x27;@&#x27;)[1];
+      var step = 0;
+      const COMM = [
+        &#x27;helo &#x27; + options.host + &#x27;\n&#x27;,
+        &#x27;mail from:&#x3c;&#x27; + options.from + &#x27;&#x3e;\n&#x27;,
+        &#x27;rcpt to:&#x3c;&#x27; + email + &#x27;&#x3e;\n&#x27;
+      ];
+      return new Promise(function (resolve, reject) {
+        var socket = net.createConnection(25, address);
+        socket.setTimeout(options.timeout, function () {
+          socket.destroy();
+          resolve(false);
+        });
+        socket.on(&#x27;data&#x27;, function (data) {
+          if (data.toString()[0] !== &#x27;2&#x27;) {
+            socket.destroy();
+            reject(new Error(&#x27;refuse&#x27;));
+          }
+          if (step &#x3c; 3) {
+            socket.write(COMM[step], function () {
+              step++;
+            });
+          } else {
+            socket.destroy();
+            resolve(true);
+          }
+        });
+        socket.on(&#x27;error&#x27;, function (err) {
+          socket.destroy();
+          if (err.code === &#x27;ECONNRESET&#x27;) {
+            reject(new Error(&#x27;refuse&#x27;));
+          } else {
+            reject(err);
+          }
+        })
+      });
+    })
+    .catch(function (err) {
+      if (err.message === &#x27;wrong&#x27;) {
+        return false;
+      } else {
+        throw err;
+      }
+    })
+}</pre></li>
+    <li>example usage<pre class="apidocCodePre">n/a</pre></li>
+    </ul>
+
+
+</div>
+
+<div class="apidocFooterDiv">
+    [ this document was created with
+    <a href="https://github.com/kaizhu256/node-utility2" target="_blank">utility2</a>
+    ]
+</div>
+</div>
